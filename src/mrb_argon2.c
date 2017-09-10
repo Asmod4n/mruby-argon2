@@ -77,8 +77,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   ctx.adlen = adlen;
   ctx.t_cost = t_cost;
   ctx.m_cost = m_cost;
-  ctx.lanes = parallelism;
-  ctx.threads = parallelism;
+  ctx.lanes = ctx.threads = parallelism;
   ctx.version = version;
   ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
 
