@@ -58,31 +58,39 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
   if (!salt) {
     mrb_value salt_val = mrb_str_new(mrb, NULL, 16);
-    mrb_sysrandom_buf(RSTRING_PTR(salt_val), RSTRING_LEN(salt_val));
+    mrb_sysrandom_buf(RSTRING_PTR(salt_val), 16);
     salt = RSTRING_PTR(salt_val);
-    saltlen = RSTRING_LEN(salt_val);
+    saltlen = 16;
   }
-  argon2_context context = {
-    (uint8_t *) RSTRING_PTR(hash), hashlen,
-    (uint8_t *) RSTRING_PTR(pwd), RSTRING_LEN(pwd),
-    (uint8_t *) salt, saltlen,
-    (uint8_t *) secret, secretlen,
-    (uint8_t *) ad, adlen,
-    t_cost, m_cost, parallelism, parallelism,
-    version,
-    NULL, NULL,
-    ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET
-  };
+
+  argon2_context ctx;
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.out = (uint8_t *) RSTRING_PTR(hash);
+  ctx.outlen = hashlen;
+  ctx.pwd = (uint8_t *) RSTRING_PTR(pwd);
+  ctx.pwdlen = RSTRING_LEN(pwd);
+  ctx.salt = (uint8_t *) salt;
+  ctx.saltlen = saltlen;
+  ctx.secret = (uint8_t *) secret;
+  ctx.secretlen = secretlen;
+  ctx.ad = (uint8_t *) ad;
+  ctx.adlen = adlen;
+  ctx.t_cost = t_cost;
+  ctx.m_cost = m_cost;
+  ctx.lanes = parallelism;
+  ctx.threads = parallelism;
+  ctx.version = version;
+  ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
 
   errno = 0;
-  int rc = argon2_ctx(&context, type);
+  int rc = argon2_ctx(&ctx, type);
   if (rc != ARGON2_OK) {
     if (errno) mrb_sys_fail(mrb, "argon2_hash");
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
   mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, saltlen, hashlen, type) - 1);
-  rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &context, type);
+  rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &ctx, type);
   if (rc != ARGON2_OK) {
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
@@ -109,16 +117,18 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
 
   mrb_value out = mrb_str_new(mrb, NULL, encoded_len);
   mrb_value salt = mrb_str_new(mrb, NULL, encoded_len);
-  argon2_context ctx = {
-    (uint8_t *) RSTRING_PTR(out), encoded_len,
-    (uint8_t *) RSTRING_PTR(pwd), RSTRING_LEN(pwd),
-    (uint8_t *) RSTRING_PTR(salt), encoded_len,
-    (uint8_t *) secret, secretlen,
-    (uint8_t *) ad, adlen,
-    0, 0, 0, 0, 0,
-    NULL, NULL,
-    ARGON2_DEFAULT_FLAGS
-  };
+  argon2_context ctx;
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.out = (uint8_t *) RSTRING_PTR(out);
+  ctx.outlen = encoded_len;
+  ctx.pwd = (uint8_t *) RSTRING_PTR(pwd);
+  ctx.pwdlen = RSTRING_LEN(pwd);
+  ctx.salt = (uint8_t *) RSTRING_PTR(salt);
+  ctx.saltlen = encoded_len;
+  ctx.secret = (uint8_t *) secret;
+  ctx.secretlen = secretlen;
+  ctx.ad = (uint8_t *) ad;
+  ctx.adlen = adlen;
 
   int ret = decode_string(&ctx, encoded, type);
   if (ret != ARGON2_OK) {
