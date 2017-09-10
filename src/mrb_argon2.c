@@ -1,0 +1,153 @@
+#include <mruby/argon2.h>
+#include <mruby/numeric.h>
+#include <limits.h>
+#include <mruby/string.h>
+#include <mruby/sysrandom.h>
+#include <argon2.h>
+#include <string.h>
+#include <errno.h>
+#include <mruby/error.h>
+#include "../deps/phc-winner-argon2/src/encoding.h"
+#include <mruby/array.h>
+
+#if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
+# define likely(x) __builtin_expect(!!(x), 1)
+# define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+# define likely(x) (x)
+# define unlikely(x) (x)
+#endif
+
+MRB_INLINE mrb_value
+mrb_argon2_num_value(mrb_state *mrb, uint64_t num)
+{
+  if (POSFIXABLE(num)) return mrb_fixnum_value(num);
+  return mrb_float_value(mrb, num);
+}
+
+MRB_INLINE void
+mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, uint64_t max, const char *type)
+{
+  if (unlikely(obj_size < min||obj_size > max)) {
+    mrb_raisef(mrb, E_ARGUMENT_ERROR, "expected a length between %S and %S (inclusive) bytes %S, got %S bytes",
+      mrb_argon2_num_value(mrb, min),
+      mrb_argon2_num_value(mrb, max),
+      mrb_str_new_cstr(mrb, type),
+      mrb_fixnum_value(obj_size));
+  }
+}
+
+static mrb_value
+mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
+{
+  mrb_value pwd;
+  char *salt, *secret, *ad;
+  mrb_int saltlen, secretlen, adlen, t_cost, m_cost, parallelism, hashlen, type, version;
+  mrb_get_args(mrb, "Ss!s!s!iiiiii", &pwd, &salt, &saltlen, &secret, &secretlen, &ad, &adlen, &t_cost, &m_cost, &parallelism, &hashlen, &type, &version);
+  mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
+  if (salt) {
+    mrb_argon2_check_length_between(mrb, saltlen, ARGON2_MIN_SALT_LENGTH, ARGON2_MAX_SALT_LENGTH, "saltlen");
+  }
+  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secretlen");
+  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "adlen");
+  mrb_argon2_check_length_between(mrb, t_cost, ARGON2_MIN_TIME, ARGON2_MAX_TIME, "t_cost");
+  mrb_argon2_check_length_between(mrb, m_cost, ARGON2_MIN_MEMORY, ARGON2_MAX_MEMORY, "m_cost");
+  mrb_argon2_check_length_between(mrb, parallelism, ARGON2_MIN_LANES, ARGON2_MAX_LANES, "parallelism");
+  mrb_argon2_check_length_between(mrb, hashlen, ARGON2_MIN_OUTLEN, ARGON2_MAX_OUTLEN, "hashlen");
+
+  mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
+  if (!salt) {
+    mrb_value salt_val = mrb_str_new(mrb, NULL, 16);
+    mrb_sysrandom_buf(RSTRING_PTR(salt_val), RSTRING_LEN(salt_val));
+    salt = RSTRING_PTR(salt_val);
+    saltlen = RSTRING_LEN(salt_val);
+  }
+  argon2_context context = {
+    (uint8_t *) RSTRING_PTR(hash), hashlen,
+    (uint8_t *) RSTRING_PTR(pwd), RSTRING_LEN(pwd),
+    (uint8_t *) salt, saltlen,
+    (uint8_t *) secret, secretlen,
+    (uint8_t *) ad, adlen,
+    t_cost, m_cost, parallelism, parallelism,
+    version,
+    NULL, NULL,
+    ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET
+  };
+
+  errno = 0;
+  int rc = argon2_ctx(&context, type);
+  if (rc != ARGON2_OK) {
+    if (errno) mrb_sys_fail(mrb, "argon2_hash");
+    mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
+  }
+
+  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, saltlen, hashlen, type) - 1);
+  rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &context, type);
+  if (rc != ARGON2_OK) {
+    mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
+  }
+
+  return mrb_assoc_new(mrb, hash, encoded);
+}
+
+static mrb_value
+mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
+{
+  const char *encoded;
+  mrb_value pwd;
+  char *secret, *ad;
+  mrb_int secretlen, adlen, type;
+  mrb_get_args(mrb, "zSs!s!i", &encoded, &pwd, &secret, &secretlen, &ad, &adlen, &type);
+  mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
+  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secretlen");
+  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "adlen");
+
+  size_t encoded_len = strlen(encoded);
+  if (encoded_len > UINT32_MAX) {
+      mrb_raise(mrb, E_RANGE_ERROR, "encoded len too large");
+  }
+
+  mrb_value out = mrb_str_new(mrb, NULL, encoded_len);
+  mrb_value salt = mrb_str_new(mrb, NULL, encoded_len);
+  argon2_context ctx = {
+    (uint8_t *) RSTRING_PTR(out), encoded_len,
+    (uint8_t *) RSTRING_PTR(pwd), RSTRING_LEN(pwd),
+    (uint8_t *) RSTRING_PTR(salt), encoded_len,
+    (uint8_t *) secret, secretlen,
+    (uint8_t *) ad, adlen,
+    0, 0, 0, 0, 0,
+    NULL, NULL,
+    ARGON2_DEFAULT_FLAGS
+  };
+
+  int ret = decode_string(&ctx, encoded, type);
+  if (ret != ARGON2_OK) {
+    mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(ret));
+  }
+
+  mrb_value tmp = mrb_str_new(mrb, NULL, encoded_len);
+  ctx.out = (uint8_t *) RSTRING_PTR(tmp);
+  ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
+  errno = 0;
+  ret = argon2_verify_ctx(&ctx, RSTRING_PTR(out), type);
+  if (ret != ARGON2_OK && errno) {
+    mrb_sys_fail(mrb, "argon2_verify_ctx");
+  }
+
+  return mrb_bool_value(ret == ARGON2_OK);
+}
+
+void
+mrb_mruby_argon2_gem_init(mrb_state* mrb)
+{
+  struct RClass *argon2_mod = mrb_define_module(mrb, "Argon2");
+  mrb_define_class_under(mrb, argon2_mod, "Error", E_RUNTIME_ERROR);
+  mrb_define_const(mrb, argon2_mod, "D", mrb_fixnum_value(Argon2_d));
+  mrb_define_const(mrb, argon2_mod, "I", mrb_fixnum_value(Argon2_i));
+  mrb_define_const(mrb, argon2_mod, "ID", mrb_fixnum_value(Argon2_id));
+  mrb_define_const(mrb, argon2_mod, "VERSION_NUMBER", mrb_fixnum_value(ARGON2_VERSION_NUMBER));
+  mrb_define_module_function(mrb, argon2_mod, "_hash", mrb_argon2_hash, MRB_ARGS_REQ(10));
+  mrb_define_module_function(mrb, argon2_mod, "_verify", mrb_argon2_verify, MRB_ARGS_REQ(5));
+}
+
+void mrb_mruby_argon2_gem_final(mrb_state* mrb) {}
