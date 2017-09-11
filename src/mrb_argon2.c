@@ -28,7 +28,7 @@ mrb_argon2_num_value(mrb_state *mrb, uint64_t num)
 MRB_INLINE void
 mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, uint64_t max, const char *type)
 {
-  if (unlikely(obj_size < min||obj_size > max)) {
+  if (unlikely((obj_size) < (uint32_t)min||(obj_size) > (uint64_t)max)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "expected a length between %S and %S (inclusive) bytes %S, got %S bytes",
       mrb_argon2_num_value(mrb, min),
       mrb_argon2_num_value(mrb, max),
@@ -54,6 +54,9 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   mrb_argon2_check_length_between(mrb, m_cost, ARGON2_MIN_MEMORY, ARGON2_MAX_MEMORY, "m_cost");
   mrb_argon2_check_length_between(mrb, parallelism, ARGON2_MIN_LANES, ARGON2_MAX_LANES, "parallelism");
   mrb_argon2_check_length_between(mrb, hashlen, ARGON2_MIN_OUTLEN, ARGON2_MAX_OUTLEN, "hashlen");
+  if (!argon2_type2string(type, 0)) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "There is no such version of Argon2");
+  }
 
   mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
   if (!salt) {
@@ -108,6 +111,9 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
   mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secretlen");
   mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "adlen");
+  if (!argon2_type2string(type, 0)) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "There is no such version of Argon2");
+  }
 
   size_t encoded_len = strlen(encoded);
   if (encoded_len > UINT32_MAX) {
