@@ -124,10 +124,6 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   ctx.pwdlen = RSTRING_LEN(pwd);
   ctx.salt = (uint8_t *) RSTRING_PTR(salt);
   ctx.saltlen = encoded_len;
-  ctx.secret = (uint8_t *) secret;
-  ctx.secretlen = secretlen;
-  ctx.ad = (uint8_t *) ad;
-  ctx.adlen = adlen;
 
   int ret = decode_string(&ctx, encoded, type);
   if (ret != ARGON2_OK) {
@@ -136,6 +132,10 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
 
   mrb_value tmp = mrb_str_new(mrb, NULL, encoded_len);
   ctx.out = (uint8_t *) RSTRING_PTR(tmp);
+  ctx.secret = (uint8_t *) secret;
+  ctx.secretlen = secretlen;
+  ctx.ad = (uint8_t *) ad;
+  ctx.adlen = adlen;
   ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
   errno = 0;
   ret = argon2_verify_ctx(&ctx, RSTRING_PTR(out), type);

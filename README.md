@@ -55,7 +55,7 @@ Example with optional arguments
 hash, encoded = Argon2.hash("a very long password", secret: "a very secure secret")
 
 if Argon2.verify(encoded, "a very long password", secret: "a very secure secret")
-  puts "entrance grantec"
+  puts "entrance granted"
 end
 ```
 
