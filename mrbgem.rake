@@ -1,7 +1,7 @@
 MRuby::Gem::Specification.new('mruby-argon2') do |spec|
   spec.license = 'Apache-2.0'
   spec.author  = 'Hendrik Beskow'
-  spec.summary = 'argon2 for mruby'
+  spec.summary = 'The password hash Argon2, winner of PHC for mruby'
   spec.add_conflict 'mruby-libsodium'
   spec.add_dependency 'mruby-sysrandom'
   spec.add_dependency 'mruby-errno'

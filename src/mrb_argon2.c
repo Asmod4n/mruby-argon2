@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <mruby/error.h>
 #include "encoding.h"
-#include <mruby/array.h>
+#include <mruby/hash.h>
 
 #if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
 # define likely(x) __builtin_expect(!!(x), 1)
@@ -40,16 +40,16 @@ mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, 
 static mrb_value
 mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
 {
-  mrb_value pwd;
-  char *salt, *secret, *ad;
-  mrb_int saltlen, secretlen, adlen, t_cost, m_cost, parallelism, hashlen, type, version;
-  mrb_get_args(mrb, "Ss!s!s!iiiiii", &pwd, &salt, &saltlen, &secret, &secretlen, &ad, &adlen, &t_cost, &m_cost, &parallelism, &hashlen, &type, &version);
+  mrb_value pwd, salt;;
+  char *secret, *ad;
+  mrb_int secretlen, adlen, t_cost, m_cost, parallelism, hashlen, type, version;
+  mrb_get_args(mrb, "SS!s!s!iiiiii", &pwd, &salt, &secret, &secretlen, &ad, &adlen, &t_cost, &m_cost, &parallelism, &hashlen, &type, &version);
   mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
-  if (salt) {
-    mrb_argon2_check_length_between(mrb, saltlen, ARGON2_MIN_SALT_LENGTH, ARGON2_MAX_SALT_LENGTH, "saltlen");
+  if (mrb_string_p(salt)) {
+    mrb_argon2_check_length_between(mrb, RSTRING_LEN(salt), ARGON2_MIN_SALT_LENGTH, ARGON2_MAX_SALT_LENGTH, "salt");
   }
-  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secretlen");
-  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "adlen");
+  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secret");
+  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "ad");
   mrb_argon2_check_length_between(mrb, t_cost, ARGON2_MIN_TIME, ARGON2_MAX_TIME, "t_cost");
   mrb_argon2_check_length_between(mrb, m_cost, ARGON2_MIN_MEMORY, ARGON2_MAX_MEMORY, "m_cost");
   mrb_argon2_check_length_between(mrb, parallelism, ARGON2_MIN_LANES, ARGON2_MAX_LANES, "parallelism");
@@ -59,11 +59,9 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
-  if (!salt) {
-    mrb_value salt_val = mrb_str_new(mrb, NULL, 16);
-    mrb_sysrandom_buf(RSTRING_PTR(salt_val), 16);
-    salt = RSTRING_PTR(salt_val);
-    saltlen = 16;
+  if (mrb_nil_p(salt)) {
+    salt = mrb_str_new(mrb, NULL, 16);
+    mrb_sysrandom_buf(RSTRING_PTR(salt), 16);
   }
 
   argon2_context ctx;
@@ -72,8 +70,8 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   ctx.outlen = hashlen;
   ctx.pwd = (uint8_t *) RSTRING_PTR(pwd);
   ctx.pwdlen = RSTRING_LEN(pwd);
-  ctx.salt = (uint8_t *) salt;
-  ctx.saltlen = saltlen;
+  ctx.salt = (uint8_t *) RSTRING_PTR(salt);
+  ctx.saltlen = RSTRING_LEN(salt);
   ctx.secret = (uint8_t *) secret;
   ctx.secretlen = secretlen;
   ctx.ad = (uint8_t *) ad;
@@ -91,13 +89,22 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
-  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, saltlen, hashlen, type) - 1);
+  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, RSTRING_LEN(salt), hashlen, type) - 1);
   rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &ctx, type);
   if (rc != ARGON2_OK) {
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
-  return mrb_assoc_new(mrb, hash, encoded);
+  mrb_value out = mrb_hash_new_capa(mrb, 8);
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "salt")), salt);
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(t_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(m_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(parallelism));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_fixnum_value(type));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(version));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "hash")), hash);
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "encoded")), encoded);
+  return out;
 }
 
 static mrb_value
@@ -109,8 +116,8 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   mrb_int secretlen, adlen, type;
   mrb_get_args(mrb, "zSs!s!i", &encoded, &pwd, &secret, &secretlen, &ad, &adlen, &type);
   mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
-  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secretlen");
-  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "adlen");
+  mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secret");
+  mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "ad");
   if (!argon2_type2string(type, 0)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "There is no such version of Argon2");
   }

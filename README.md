@@ -5,14 +5,13 @@ The password hash [Argon2](https://github.com/P-H-C/phc-winner-argon2), winner o
 
 Installation
 ============
-
-add this to your build_config.rb
+add this to your `build_config.rb`
 ```ruby
   conf.gem mgem: 'mruby-argon2'
 ```
 Installation Notes
 ------------------
-This packages libargon2 with mruby, so if you link mruby against your app you already have all symbols for argon2
+This packages libargon2 with mruby, so if you link mruby against your app you already have all symbols for argon2. The argon2.h file is inside the `mruby/build/mrbgems/mruby-argon2/include` folder
 
 Examples
 ========
@@ -20,9 +19,9 @@ Examples
 Example with default options
 ----------------------------
 ```ruby
-hash, encoded = Argon2.hash("a very long password")
+out = Argon2.hash("a very long password")
 
-if (Argon2.verify(encoded, "a very long password"))
+if (Argon2.verify(out[:encoded], "a very long password"))
   puts "entrance granted"
 end
 ```
@@ -59,31 +58,43 @@ type: Fixnum # You can choose between Argon2::I, Argon2::D or Argon2::ID (defaul
 
 version: Fixnum # 0x10 or 0x13 (default = 0x13)
 
-
 Example with optional arguments
 -------------------------------
 ```ruby
-hash, encoded = Argon2.hash("a very long password", secret: "a very secure secret")
+out = Argon2.hash("a very long password", secret: "a very secure secret")
 
-if Argon2.verify(encoded, "a very long password", secret: "a very secure secret")
+if Argon2.verify(out[:encoded], "a very long password", secret: "a very secure secret")
   puts "entrance granted"
 end
 ```
 
-
+Output values of Argon2.hash
+----------------------------
+Argon2.hash returns a ruby hash with the following fields
+```ruby
+{
+  salt: # the salt
+  t_cost: # the number of itarations
+  m_cost: # the memory usage
+  parallelism: # the threads used
+  type: # the Argon2 type, as a Number
+  version: # the version number
+  hash: # the raw hash calculated
+  encoded: # the encoded String, suiteable for password Storage and verification
+}
+```
 
 Notes
 =====
-
 Password and secret arguments are cleared after use, if you have to use them afterwards in your mruby app you have to duplicate them before usage.
 This is done so secrets cannot be leaked by accident.
 
 ```ruby
 pwd = "a very long password"
-hash, encoded = Argon2.hash(pwd)
+out = Argon2.hash(pwd)
 puts pwd # its all zeroes now
 pwd = "a very long password"
 reuseable_pwd = pwd.dup
-hash, encoded = Argon2.hash(pwd)
+out = Argon2.hash(pwd)
 puts reuseable_pwd # still useable
 ```
