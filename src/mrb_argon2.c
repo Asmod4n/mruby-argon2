@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <mruby/error.h>
-#include "../deps/phc-winner-argon2/src/encoding.h"
+#include "encoding.h"
 #include <mruby/array.h>
 
 #if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)

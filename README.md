@@ -3,6 +3,16 @@
 
 The password hash [Argon2](https://github.com/P-H-C/phc-winner-argon2), winner of PHC for mruby
 
+Installation
+============
+
+add this to your build_config.rb
+```ruby
+  conf.gem mgem: 'mruby-argon2'
+```
+Installation Notes
+------------------
+This packages libargon2 with mruby, so if you link mruby against your app you already have all symbols for argon2
 
 Examples
 ========
@@ -39,11 +49,11 @@ The `ad` parameter, which is used to fold any additional data into the hash
 
 t_cost: Fixnum # Sets the number of iterations to N (default = 3)
 
-m_cost: Fixnum # Sets the memory usage of N KiB (default 2 << 12)
+m_cost: Fixnum # Sets the memory usage of N KiB (default = 2 << 12)
 
-parallelism: Fixnum # Sets parallelism to N threads (default 1)
+parallelism: Fixnum # Sets parallelism to N threads (default = 1)
 
-hashlen: Fixnum # Sets hash output length to N bytes (default 32)
+hashlen: Fixnum # Sets hash output length to N bytes (default = 32)
 
 type: Fixnum # You can choose between Argon2::I, Argon2::D or Argon2::ID (default = Argon2::I)
 
@@ -59,6 +69,8 @@ if Argon2.verify(encoded, "a very long password", secret: "a very secure secret"
   puts "entrance granted"
 end
 ```
+
+
 
 Notes
 =====
