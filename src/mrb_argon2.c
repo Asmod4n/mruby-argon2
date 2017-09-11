@@ -152,8 +152,9 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
   errno = 0;
   ret = argon2_verify_ctx(&ctx, RSTRING_PTR(out), type);
-  if (ret != ARGON2_OK && errno) {
-    mrb_sys_fail(mrb, "argon2_verify_ctx");
+  if (ret != ARGON2_OK && ret != ARGON2_VERIFY_MISMATCH) {
+    if (errno) mrb_sys_fail(mrb, "argon2_verify_ctx");
+    mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(ret));
   }
 
   return mrb_bool_value(ret == ARGON2_OK);

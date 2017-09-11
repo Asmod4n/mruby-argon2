@@ -26,7 +26,8 @@ if (Argon2.verify(out[:encoded], "a very long password"))
 end
 ```
 
-Options explained
+Optional arguments
+-----------------
 
 Argon2.hash has the following optional arguments:
 
@@ -58,6 +59,8 @@ type: Fixnum # You can choose between Argon2::I, Argon2::D or Argon2::ID (defaul
 
 version: Fixnum # 0x10 or 0x13 (default = 0x13)
 
+To find out more about them take a look at https://github.com/P-H-C/phc-winner-argon2
+
 Example with optional arguments
 -------------------------------
 ```ruby
@@ -86,7 +89,7 @@ Argon2.hash returns a ruby hash with the following fields
 
 Notes
 =====
-Password and secret arguments are cleared after use, if you have to use them afterwards in your mruby app you have to duplicate them before usage.
+Password and secret arguments are cleared after successfull use (they shouldn't be touched if you pass the wrong arguments, so you can retry them), if you have to use them afterwards in your mruby app you have to duplicate them before usage.
 This is done so secrets cannot be leaked by accident.
 
 ```ruby
