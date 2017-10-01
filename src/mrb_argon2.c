@@ -40,13 +40,16 @@ mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, 
 static mrb_value
 mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
 {
-  mrb_value pwd, salt;;
+  mrb_value pwd, salt;
   char *secret, *ad;
   mrb_int secretlen, adlen, t_cost, m_cost, parallelism, hashlen, type, version;
   mrb_get_args(mrb, "SS!s!s!iiiiii", &pwd, &salt, &secret, &secretlen, &ad, &adlen, &t_cost, &m_cost, &parallelism, &hashlen, &type, &version);
   mrb_argon2_check_length_between(mrb, RSTRING_LEN(pwd), ARGON2_MIN_PWD_LENGTH, ARGON2_MAX_PWD_LENGTH, "pwd");
   if (mrb_string_p(salt)) {
     mrb_argon2_check_length_between(mrb, RSTRING_LEN(salt), ARGON2_MIN_SALT_LENGTH, ARGON2_MAX_SALT_LENGTH, "salt");
+  } else {
+    salt = mrb_str_new(mrb, NULL, 16);
+    mrb_sysrandom_buf(RSTRING_PTR(salt), RSTRING_LEN(salt));
   }
   mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secret");
   mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "ad");
@@ -55,15 +58,10 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   mrb_argon2_check_length_between(mrb, parallelism, ARGON2_MIN_LANES, ARGON2_MAX_LANES, "parallelism");
   mrb_argon2_check_length_between(mrb, hashlen, ARGON2_MIN_OUTLEN, ARGON2_MAX_OUTLEN, "hashlen");
   if (!argon2_type2string(type, 0)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "There is no such version of Argon2");
+    mrb_raise(mrb, E_ARGUMENT_ERROR, argon2_error_message(ARGON2_INCORRECT_TYPE));
   }
 
   mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
-  if (mrb_nil_p(salt)) {
-    salt = mrb_str_new(mrb, NULL, 16);
-    mrb_sysrandom_buf(RSTRING_PTR(salt), 16);
-  }
-
   argon2_context ctx;
   memset(&ctx, 0, sizeof(ctx));
   ctx.out = (uint8_t *) RSTRING_PTR(hash);
@@ -89,7 +87,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
-  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, RSTRING_LEN(salt), hashlen, type) - 1);
+  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(ctx.t_cost, ctx.m_cost, ctx.lanes, ctx.saltlen, ctx.outlen, type) - 1);
   rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &ctx, type);
   if (rc != ARGON2_OK) {
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
@@ -97,11 +95,11 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
 
   mrb_value out = mrb_hash_new_capa(mrb, 8);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "salt")), salt);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(t_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(m_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(parallelism));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(ctx.t_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(ctx.m_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(ctx.lanes));
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_fixnum_value(type));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(version));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(ctx.version));
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "hash")), hash);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "encoded")), encoded);
   return out;
@@ -119,7 +117,7 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secret");
   mrb_argon2_check_length_between(mrb, adlen, ARGON2_MIN_AD_LENGTH, ARGON2_MAX_AD_LENGTH, "ad");
   if (!argon2_type2string(type, 0)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "There is no such version of Argon2");
+    mrb_raise(mrb, E_ARGUMENT_ERROR, argon2_error_message(ARGON2_INCORRECT_TYPE));
   }
 
   size_t encoded_len = strlen(encoded);
@@ -152,12 +150,16 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
   errno = 0;
   ret = argon2_verify_ctx(&ctx, RSTRING_PTR(out), type);
-  if (ret != ARGON2_OK && ret != ARGON2_VERIFY_MISMATCH) {
-    if (errno) mrb_sys_fail(mrb, "argon2_verify_ctx");
-    mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(ret));
+  switch (ret) {
+    case ARGON2_OK:
+      return mrb_true_value();
+    case ARGON2_VERIFY_MISMATCH:
+      return mrb_false_value();
+    default: {
+      if (errno) mrb_sys_fail(mrb, "argon2_verify_ctx");
+      mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(ret));
+    }
   }
-
-  return mrb_bool_value(ret == ARGON2_OK);
 }
 
 void
