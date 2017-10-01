@@ -90,18 +90,3 @@ Argon2.hash returns a ruby hash with the following fields
 Notes for default arguments
 ---------------------------
 The default arguments can change over time, they are taken from the command like argon2 utility.
-
-Notes for passed arguments
-==========================
-Password and secret arguments are cleared after successfull use (they shouldn't be touched if you pass the wrong arguments, so you can retry them), if you have to use them afterwards in your mruby app you have to duplicate them before usage.
-This is done so secrets cannot be leaked by accident.
-
-```ruby
-pwd = "a very long password"
-out = Argon2.hash(pwd)
-puts pwd # its all zeroes now
-pwd = "a very long password"
-reuseable_pwd = pwd.dup
-out = Argon2.hash(pwd)
-puts reuseable_pwd # still useable
-```

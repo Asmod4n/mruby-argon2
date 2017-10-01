@@ -1,13 +1,11 @@
 def hashtest(version, t, m, p, pwd, salt, mcfref)
-  testpwd = pwd.dup
   out = Argon2.hash(pwd, salt: salt, t_cost: t, m_cost: (1 << m), parallelism: p, version: version)
 
   if Argon2::VERSION_NUMBER == version
-    assert_equal(out[:encoded], mcfref)
+    assert_equal(mcfref, out[:encoded])
   end
-  mcrefpwd = testpwd.dup
-  assert_true(Argon2.verify(out[:encoded], testpwd))
-  assert_true(Argon2.verify(mcfref, mcrefpwd))
+  assert_true(Argon2.verify(out[:encoded], pwd))
+  assert_true(Argon2.verify(mcfref, pwd))
 end
 
 assert("Argon2 version #{0x10}") do

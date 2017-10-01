@@ -78,7 +78,6 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   ctx.m_cost = m_cost;
   ctx.lanes = ctx.threads = parallelism;
   ctx.version = version;
-  ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
 
   errno = 0;
   int rc = argon2_ctx(&ctx, type);
@@ -87,7 +86,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
-  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(ctx.t_cost, ctx.m_cost, ctx.lanes, ctx.saltlen, ctx.outlen, type) - 1);
+  mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, RSTRING_LEN(salt), hashlen, type) - 1);
   rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &ctx, type);
   if (rc != ARGON2_OK) {
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
@@ -95,11 +94,11 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
 
   mrb_value out = mrb_hash_new_capa(mrb, 8);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "salt")), salt);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(ctx.t_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(ctx.m_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(ctx.lanes));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(t_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(m_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(parallelism));
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_fixnum_value(type));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(ctx.version));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(version));
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "hash")), hash);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "encoded")), encoded);
   return out;
@@ -147,7 +146,7 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   ctx.secretlen = secretlen;
   ctx.ad = (uint8_t *) ad;
   ctx.adlen = adlen;
-  ctx.flags = ARGON2_FLAG_CLEAR_PASSWORD | ARGON2_FLAG_CLEAR_SECRET;
+
   errno = 0;
   ret = argon2_verify_ctx(&ctx, RSTRING_PTR(out), type);
   switch (ret) {
