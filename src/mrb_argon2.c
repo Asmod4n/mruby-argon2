@@ -1,10 +1,13 @@
+#ifndef __STDC_WANT_LIB_EXT1__
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
+#include <string.h>
 #include <mruby/argon2.h>
 #include <mruby/numeric.h>
 #include <limits.h>
 #include <mruby/string.h>
 #include <mruby/sysrandom.h>
 #include <argon2.h>
-#include <string.h>
 #include <errno.h>
 #include <mruby/error.h>
 #include "encoding.h"
@@ -28,7 +31,7 @@ mrb_argon2_num_value(mrb_state *mrb, uint64_t num)
 MRB_INLINE void
 mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, uint64_t max, const char *type)
 {
-  if (unlikely((obj_size) < (uint32_t)min||(obj_size) > (uint64_t)max)) {
+  if (unlikely((mrb_int)obj_size < (uint32_t)min||(mrb_int)obj_size > (uint64_t)max)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "expected a length between %S and %S (inclusive) bytes %S, got %S bytes",
       mrb_argon2_num_value(mrb, min),
       mrb_argon2_num_value(mrb, max),
@@ -164,14 +167,14 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
 void
 mrb_mruby_argon2_gem_init(mrb_state* mrb)
 {
-  struct RClass *argon2_mod = mrb_define_module(mrb, "Argon2");
-  mrb_define_class_under(mrb, argon2_mod, "Error", E_RUNTIME_ERROR);
-  mrb_define_const(mrb, argon2_mod, "D", mrb_fixnum_value(Argon2_d));
-  mrb_define_const(mrb, argon2_mod, "I", mrb_fixnum_value(Argon2_i));
-  mrb_define_const(mrb, argon2_mod, "ID", mrb_fixnum_value(Argon2_id));
-  mrb_define_const(mrb, argon2_mod, "VERSION_NUMBER", mrb_fixnum_value(ARGON2_VERSION_NUMBER));
-  mrb_define_module_function(mrb, argon2_mod, "_hash", mrb_argon2_hash, MRB_ARGS_REQ(10));
-  mrb_define_module_function(mrb, argon2_mod, "_verify", mrb_argon2_verify, MRB_ARGS_REQ(5));
+  struct RClass *argon2_class = mrb_define_class(mrb, "Argon2", mrb->object_class);
+  mrb_define_class_under(mrb, argon2_class, "Error", E_RUNTIME_ERROR);
+  mrb_define_const(mrb, argon2_class, "D", mrb_fixnum_value(Argon2_d));
+  mrb_define_const(mrb, argon2_class, "I", mrb_fixnum_value(Argon2_i));
+  mrb_define_const(mrb, argon2_class, "ID", mrb_fixnum_value(Argon2_id));
+  mrb_define_const(mrb, argon2_class, "VERSION_NUMBER", mrb_fixnum_value(ARGON2_VERSION_NUMBER));
+  mrb_define_class_method(mrb, argon2_class, "_hash", mrb_argon2_hash, MRB_ARGS_REQ(10));
+  mrb_define_class_method(mrb, argon2_class, "_verify", mrb_argon2_verify, MRB_ARGS_REQ(5));
 }
 
 void mrb_mruby_argon2_gem_final(mrb_state* mrb) {}

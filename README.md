@@ -31,7 +31,7 @@ Optional arguments
 
 Argon2.hash has the following optional arguments:
 
-salt: String # The salt to use, at least 8 characters, (default = 16 random bytes)
+salt: String # The salt to use, at least 8 characters, if you don't know what this is it's better left to the default value (default = 16 random bytes)
 
 The `secret` parameter, which is used for [keyed hashing](
    https://en.wikipedia.org/wiki/Hash-based_message_authentication_code).
