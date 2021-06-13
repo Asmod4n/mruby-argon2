@@ -21,22 +21,15 @@
 # define unlikely(x) (x)
 #endif
 
-MRB_INLINE mrb_value
-mrb_argon2_num_value(mrb_state *mrb, uint64_t num)
-{
-  if (POSFIXABLE(num)) return mrb_fixnum_value(num);
-  return mrb_float_value(mrb, num);
-}
-
 MRB_INLINE void
 mrb_argon2_check_length_between(mrb_state *mrb, mrb_int obj_size, uint32_t min, uint64_t max, const char *type)
 {
   if (unlikely((mrb_int)obj_size < (uint32_t)min||(mrb_int)obj_size > (uint64_t)max)) {
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "expected a length between %S and %S (inclusive) bytes %S, got %S bytes",
-      mrb_argon2_num_value(mrb, min),
-      mrb_argon2_num_value(mrb, max),
+      mrb_int_value(mrb, min),
+      mrb_int_value(mrb, max),
       mrb_str_new_cstr(mrb, type),
-      mrb_fixnum_value(obj_size));
+      mrb_int_value(mrb, obj_size));
   }
 }
 
@@ -80,7 +73,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   ctx.t_cost = t_cost;
   ctx.m_cost = m_cost;
   ctx.lanes = ctx.threads = parallelism;
-  ctx.version = version;
+  ctx.version = (uint32_t) version;
 
   errno = 0;
   int rc = argon2_ctx(&ctx, type);
@@ -97,11 +90,11 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
 
   mrb_value out = mrb_hash_new_capa(mrb, 8);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "salt")), salt);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_fixnum_value(t_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_fixnum_value(m_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_fixnum_value(parallelism));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_fixnum_value(type));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_fixnum_value(version));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_int_value(mrb, t_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_int_value(mrb, m_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_int_value(mrb, parallelism));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_int_value(mrb, type));
+  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_int_value(mrb, version));
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "hash")), hash);
   mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "encoded")), encoded);
   return out;
@@ -169,10 +162,10 @@ mrb_mruby_argon2_gem_init(mrb_state* mrb)
 {
   struct RClass *argon2_class = mrb_define_class(mrb, "Argon2", mrb->object_class);
   mrb_define_class_under(mrb, argon2_class, "Error", E_RUNTIME_ERROR);
-  mrb_define_const(mrb, argon2_class, "D", mrb_fixnum_value(Argon2_d));
-  mrb_define_const(mrb, argon2_class, "I", mrb_fixnum_value(Argon2_i));
-  mrb_define_const(mrb, argon2_class, "ID", mrb_fixnum_value(Argon2_id));
-  mrb_define_const(mrb, argon2_class, "VERSION_NUMBER", mrb_fixnum_value(ARGON2_VERSION_NUMBER));
+  mrb_define_const(mrb, argon2_class, "D", mrb_int_value(mrb, Argon2_d));
+  mrb_define_const(mrb, argon2_class, "I", mrb_int_value(mrb, Argon2_i));
+  mrb_define_const(mrb, argon2_class, "ID", mrb_int_value(mrb, Argon2_id));
+  mrb_define_const(mrb, argon2_class, "VERSION_NUMBER", mrb_int_value(mrb, ARGON2_VERSION_NUMBER));
   mrb_define_class_method(mrb, argon2_class, "_hash", mrb_argon2_hash, MRB_ARGS_REQ(10));
   mrb_define_class_method(mrb, argon2_class, "_verify", mrb_argon2_verify, MRB_ARGS_REQ(5));
 }
