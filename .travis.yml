@@ -1,5 +1,4 @@
-dist: trusty
-sudo: false
+dist: focal
 addons:
   apt:
     packages:
@@ -14,4 +13,3 @@ script:
   - rake test
 os:
   - linux
-  - osx
