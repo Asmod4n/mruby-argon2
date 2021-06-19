@@ -47,17 +47,17 @@ The `ad` parameter, which is used to fold any additional data into the hash
    random string stored alongside your password. The `secret` should be a random
    key only usable at hashing time. The `ad` is for any other data.
 
-t_cost: Fixnum # Sets the number of iterations to N (default = 3)
+t_cost: Integer # Sets the number of iterations to N (default = 3)
 
-m_cost: Fixnum # Sets the memory usage of N KiB (default = 2 << 12)
+m_cost: Integer # Sets the memory usage of N KiB (default = 2 << 12)
 
-parallelism: Fixnum # Sets parallelism to N threads (default = 1)
+parallelism: Integer # Sets parallelism to N threads (default = 1)
 
-hashlen: Fixnum # Sets hash output length to N bytes (default = 32)
+hashlen: Integer # Sets hash output length to N bytes (default = 32)
 
-type: Fixnum # You can choose between Argon2::I, Argon2::D or Argon2::ID (default = Argon2::I)
+type: Integer # You can choose between Argon2::I, Argon2::D or Argon2::ID (default = Argon2::I)
 
-version: Fixnum # 0x10 or 0x13 (default = 0x13)
+version: Integer # 0x10 or 0x13 (default = 0x13)
 
 To find out more about them take a look at https://github.com/P-H-C/phc-winner-argon2
 
