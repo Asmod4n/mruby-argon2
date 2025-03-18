@@ -14,7 +14,7 @@
 #include <mruby/hash.h>
 #include <mruby/version.h>
 
-#if 30000 <= MRUBY_RELEASE_NO
+#if MRUBY_RELEASE_NO >= 30000
 # include <mruby/presym.h>
 #else
 # define MRB_SYM(s) mrb_intern_lit(mrb, #s)
