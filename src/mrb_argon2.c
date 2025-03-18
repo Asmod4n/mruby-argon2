@@ -12,6 +12,13 @@
 #include <mruby/error.h>
 #include "encoding.h"
 #include <mruby/hash.h>
+#include <mruby/version.h>
+
+#if MRUBY_RELEASE_NO >= 30000
+# include <mruby/presym.h>
+#else
+# define MRB_SYM(s) mrb_intern_lit(mrb, #s)
+#endif
 
 #if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
 # define likely(x) __builtin_expect(!!(x), 1)
@@ -89,14 +96,14 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value out = mrb_hash_new_capa(mrb, 8);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "salt")), salt);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "t_cost")), mrb_int_value(mrb, t_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "m_cost")), mrb_int_value(mrb, m_cost));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "parallelism")), mrb_int_value(mrb, parallelism));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "type")), mrb_int_value(mrb, type));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "version")), mrb_int_value(mrb, version));
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "hash")), hash);
-  mrb_hash_set(mrb, out, mrb_symbol_value(mrb_intern_lit(mrb, "encoded")), encoded);
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(salt)), salt);
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(t_cost)), mrb_int_value(mrb, t_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(m_cost)), mrb_int_value(mrb, m_cost));
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(parallelism)), mrb_int_value(mrb, parallelism));
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(type)), mrb_int_value(mrb, type));
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(version)), mrb_int_value(mrb, version));
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(hash)), hash);
+  mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(encoded)), encoded);
   return out;
 }
 
