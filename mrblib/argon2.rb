@@ -1,9 +1,9 @@
 class Argon2
   DEFAULT_HASH_OPTIONS = {salt: nil, secret: nil, ad: nil,
     t_cost: 3, m_cost: (2 << 12), parallelism: 1, hashlen: 32,
-    type: I, version: VERSION_NUMBER}
+    type: I, version: VERSION_NUMBER}.freeze
   DEFAULT_HASH_OPTIONS_KEYS = DEFAULT_HASH_OPTIONS.keys
-  DEFAULT_VERIFY_OPTIONS = {secret: nil, ad: nil, type: I}
+  DEFAULT_VERIFY_OPTIONS = {secret: nil, ad: nil, type: I}.freeze
   DEFAULT_VERIFY_OPTIONS_KEYS = DEFAULT_VERIFY_OPTIONS.keys
 
   def self.hash(pwd, _options = {})

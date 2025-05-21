@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.com/Asmod4n/mruby-argon2.svg?branch=master)](https://travis-ci.com/Asmod4n/mruby-argon2)
 # mruby-argon2
 
 The password hash [Argon2](https://github.com/P-H-C/phc-winner-argon2), winner of PHC for mruby
