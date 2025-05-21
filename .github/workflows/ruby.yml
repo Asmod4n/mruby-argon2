@@ -34,4 +34,4 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
     - name: Run tests
-      run: rake
+      run: rake test
