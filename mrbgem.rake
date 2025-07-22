@@ -7,7 +7,7 @@ MRuby::Gem::Specification.new('mruby-argon2') do |spec|
   spec.add_dependency 'mruby-errno'
 
   argon2_src = "#{spec.dir}/deps/phc-winner-argon2"
-  spec.cc.include_paths << "#{argon2_src}/src"
+  spec.cc.include_paths << "#{argon2_src}/src" << "#{argon2_src}/include"
 
   if build.kind_of?(MRuby::CrossBuild)
     spec.objs += %W(
@@ -20,7 +20,7 @@ MRuby::Gem::Specification.new('mruby-argon2') do |spec|
     ).map { |f| f.relative_path_from(dir).pathmap("#{build_dir}/%X#{spec.exts.object}" ) }
     spec.cc.defines << 'ARGON2_NO_THREADS'
   else
-    if spec.build.toolchains.include? 'visualcpp'
+    if spec.for_windows?
       ref = "#{argon2_src}/src/ref.c"
     else
       `#{spec.cc.command} -I#{argon2_src}/include -I#{argon2_src}/src -march=native #{argon2_src}/src/opt.c -c -o /dev/null 2>/dev/null`
