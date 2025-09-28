@@ -167,14 +167,14 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
 void
 mrb_mruby_argon2_gem_init(mrb_state* mrb)
 {
-  struct RClass *argon2_class = mrb_define_class(mrb, "Argon2", mrb->object_class);
-  mrb_define_class_under(mrb, argon2_class, "Error", E_RUNTIME_ERROR);
-  mrb_define_const(mrb, argon2_class, "D", mrb_int_value(mrb, Argon2_d));
-  mrb_define_const(mrb, argon2_class, "I", mrb_int_value(mrb, Argon2_i));
-  mrb_define_const(mrb, argon2_class, "ID", mrb_int_value(mrb, Argon2_id));
-  mrb_define_const(mrb, argon2_class, "VERSION_NUMBER", mrb_int_value(mrb, ARGON2_VERSION_NUMBER));
-  mrb_define_class_method(mrb, argon2_class, "_hash", mrb_argon2_hash, MRB_ARGS_REQ(10));
-  mrb_define_class_method(mrb, argon2_class, "_verify", mrb_argon2_verify, MRB_ARGS_REQ(5));
+  struct RClass *argon2_class = mrb_define_class_id(mrb, MRB_SYM(Argon2), mrb->object_class);
+  mrb_define_class_under_id(mrb, argon2_class, MRB_SYM(Error), E_RUNTIME_ERROR);
+  mrb_define_const_id(mrb, argon2_class, MRB_SYM(D), mrb_int_value(mrb, Argon2_d));
+  mrb_define_const_id(mrb, argon2_class, MRB_SYM(I), mrb_int_value(mrb, Argon2_i));
+  mrb_define_const_id(mrb, argon2_class, MRB_SYM(ID), mrb_int_value(mrb, Argon2_id));
+  mrb_define_const_id(mrb, argon2_class, MRB_SYM(VERSION_NUMBER), mrb_int_value(mrb, ARGON2_VERSION_NUMBER));
+  mrb_define_class_method_id(mrb, argon2_class, MRB_SYM(_hash), mrb_argon2_hash, MRB_ARGS_REQ(10));
+  mrb_define_class_method_id(mrb, argon2_class, MRB_SYM(_verify), mrb_argon2_verify, MRB_ARGS_REQ(5));
 }
 
 void mrb_mruby_argon2_gem_final(mrb_state* mrb) {}
