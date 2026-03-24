@@ -52,6 +52,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
     mrb_argon2_check_length_between(mrb, RSTRING_LEN(salt), ARGON2_MIN_SALT_LENGTH, ARGON2_MAX_SALT_LENGTH, "salt");
   } else {
     salt = mrb_str_new(mrb, NULL, 16);
+    mrb_gc_protect(mrb, salt);
     mrb_sysrandom_buf(RSTRING_PTR(salt), RSTRING_LEN(salt));
   }
   mrb_argon2_check_length_between(mrb, secretlen, ARGON2_MIN_SECRET, ARGON2_MAX_SECRET, "secret");
@@ -65,6 +66,7 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value hash = mrb_str_new(mrb, NULL, hashlen);
+  mrb_gc_protect(mrb, hash);
   argon2_context ctx;
   memset(&ctx, 0, sizeof(ctx));
   ctx.out = (uint8_t *) RSTRING_PTR(hash);
@@ -90,12 +92,14 @@ mrb_argon2_hash(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value encoded = mrb_str_new(mrb, NULL, argon2_encodedlen(t_cost, m_cost, parallelism, RSTRING_LEN(salt), hashlen, type) - 1);
+  mrb_gc_protect(mrb, encoded);
   rc = encode_string(RSTRING_PTR(encoded), RSTRING_LEN(encoded) + 1, &ctx, type);
   if (rc != ARGON2_OK) {
     mrb_raise(mrb, E_ARGON2_ERROR, argon2_error_message(rc));
   }
 
   mrb_value out = mrb_hash_new_capa(mrb, 8);
+  mrb_gc_protect(mrb, out);
   mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(salt)), salt);
   mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(t_cost)), mrb_int_value(mrb, t_cost));
   mrb_hash_set(mrb, out, mrb_symbol_value(MRB_SYM(m_cost)), mrb_int_value(mrb, m_cost));
@@ -128,7 +132,9 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value out = mrb_str_new(mrb, NULL, encoded_len);
+  mrb_gc_protect(mrb, out);
   mrb_value salt = mrb_str_new(mrb, NULL, encoded_len);
+  mrb_gc_protect(mrb, salt);
   argon2_context ctx;
   memset(&ctx, 0, sizeof(ctx));
   ctx.out = (uint8_t *) RSTRING_PTR(out);
@@ -144,6 +150,7 @@ mrb_argon2_verify(mrb_state *mrb, mrb_value argon2_module)
   }
 
   mrb_value tmp = mrb_str_new(mrb, NULL, encoded_len);
+  mrb_gc_protect(mrb, tmp);
   ctx.out = (uint8_t *) RSTRING_PTR(tmp);
   ctx.secret = (uint8_t *) secret;
   ctx.secretlen = secretlen;
