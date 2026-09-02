@@ -8,6 +8,7 @@ MRuby::Gem::Specification.new('mruby-argon2') do |spec|
 
   argon2_src = "#{spec.dir}/deps/phc-winner-argon2"
   spec.cc.include_paths << "#{argon2_src}/src" << "#{argon2_src}/include"
+  spec.export_include_paths << "#{argon2_src}/include"
 
   if build.kind_of?(MRuby::CrossBuild)
     spec.objs += %W(
